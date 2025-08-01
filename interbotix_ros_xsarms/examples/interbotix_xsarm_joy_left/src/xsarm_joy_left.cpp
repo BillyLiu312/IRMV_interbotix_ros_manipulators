@@ -178,15 +178,6 @@ private:
     static bool timer_started = false;
     interbotix_xs_msgs::msg::ArmJoy joy_cmd;
 
-    // Check if the ee_x_cmd should be flipped
-    if (msg.buttons.at(cntlr["FLIP_EE_X"]) == 1 && !flip_ee_x_cmd_last_state) {
-      flip_ee_x_cmd = true;
-    } else if (msg.buttons.at(cntlr["FLIP_EE_X"]) == 1 && flip_ee_x_cmd_last_state) {
-      flip_ee_x_cmd = false;
-    } else if (msg.buttons.at(cntlr["FLIP_EE_X"]) == 0) {
-      flip_ee_x_cmd_last_state = flip_ee_x_cmd;
-    }
-
     // Check the ee_x_cmd
     if (msg.axes.at(cntlr["EE_X"]) >= threshold) {
       joy_cmd.ee_x_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_X_INC;
@@ -195,9 +186,9 @@ private:
     } 
 
     // Check the ee_y_cmd
-    if (msg.buttons.at(cntlr["EE_Y"]) == 1) {
+    if (msg.axes.at(cntlr["EE_Y"]) == 1) {
       joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_INC;
-    } else if (msg.buttons.at(cntlr["EE_Y"]) == -1) {
+    } else if (msg.axes.at(cntlr["EE_Y"]) == -1) {
       joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_DEC;
     }
 
@@ -216,7 +207,7 @@ private:
     }
 
     // Check the waist_cmd
-    if (msg.buttons.at(cntlr["WAIST_CCW"]) <= -threshold) {
+    if (msg.axes.at(cntlr["WAIST_CCW"]) <= -threshold) {
       joy_cmd.waist_cmd = interbotix_xs_msgs::msg::ArmJoy::WAIST_CCW;
     } else if (msg.buttons.at(cntlr["WAIST_CW"]) == 1) {
       joy_cmd.waist_cmd = interbotix_xs_msgs::msg::ArmJoy::WAIST_CW;
