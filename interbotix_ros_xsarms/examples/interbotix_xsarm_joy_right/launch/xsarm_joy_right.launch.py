@@ -170,7 +170,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'threshold',
-            default_value='0.75',
+            default_value='0.6',
             description=(
                 'value from 0 to 1 defining joystick sensitivity; a larger number means the '
                 'joystick should be less sensitive.'

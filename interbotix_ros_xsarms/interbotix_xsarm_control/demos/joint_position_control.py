@@ -42,23 +42,23 @@ Then change to this directory and type:
 
     python3 joint_position_control.py
 """
-
+import numpy as np
 
 def main():
-    joint_positions = [-1.0, 0.5, 0.5, 0, -0.5, 1.57]
+    joint_positions = [np.pi / 2, -1, 1, 0, 0, np.pi / 2]
 
     bot = InterbotixManipulatorXS(
-        robot_model='wx250s',
+        robot_model='wx250s1',
         group_name='arm',
         gripper_name='gripper',
     )
 
     robot_startup()
 
-    bot.arm.go_to_home_pose()
+    # bot.arm.go_to_home_pose()
     bot.arm.set_joint_positions(joint_positions)
-    bot.arm.go_to_home_pose()
-    bot.arm.go_to_sleep_pose()
+    # bot.arm.go_to_home_pose()
+    # bot.arm.go_to_sleep_pose()
 
     robot_shutdown()
 

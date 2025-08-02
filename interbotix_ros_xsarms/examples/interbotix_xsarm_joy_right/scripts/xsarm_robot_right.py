@@ -71,6 +71,9 @@ class XSArmRobot(InterbotixManipulatorXS):
             robot_name=pargs.robot_name,
             moving_time=0.2,
             accel_time=0.1,
+            gripper_pressure=0.9,
+            gripper_pressure_lower_limit=-300,
+            gripper_pressure_upper_limit=300,
             args=args,
         )
         self.rate = self.core.get_node().create_rate(self.current_loop_rate)
@@ -155,9 +158,9 @@ class XSArmRobot(InterbotixManipulatorXS):
 
         # Check the gripper_cmd
         if (msg.gripper_cmd == ArmJoy.GRIPPER_RELEASE):
-            self.gripper.release(delay=0)
+            self.gripper.gripper_controller(effort=300.0, delay=0)
         elif (msg.gripper_cmd == ArmJoy.GRIPPER_GRASP):
-            self.gripper.grasp(delay=0)
+            self.gripper.gripper_controller(effort=-200.0, delay=0)
 
         # Check the gripper_pwm_cmd
         if (
@@ -196,10 +199,16 @@ class XSArmRobot(InterbotixManipulatorXS):
         # Check the pose_cmd
         if (msg.pose_cmd != 0):
             if (msg.pose_cmd == ArmJoy.HOME_POSE):
-                # self.arm.go_to_home_pose(moving_time=1.5, accel_time=0.75)
-                self.arm.set_ee_pose_components(y=-0.2, z=0.2, roll=np.pi / 2, moving_time=1.5, accel_time=0.75)
+                self.arm.go_to_home_pose(moving_time=1.5, accel_time=0.75)
+                joint_positions = [-np.pi / 2, -1, 1, 0, 0, np.pi / 2]
+                self.arm.set_joint_positions(joint_positions, moving_time=1.5, accel_time=0.75)
+                self.core.get_node().loginfo('Go Home')
             elif (msg.pose_cmd == ArmJoy.SLEEP_POSE):
-                self.arm.go_to_sleep_pose(moving_time=1.5, accel_time=0.75)
+                # self.arm.go_to_sleep_pose(moving_time=1.5, accel_time=0.75)
+                self.arm.go_to_home_pose(moving_time=1.5, accel_time=0.75)
+                joint_positions = [0, -np.pi / 3, np.pi / 2, 0, 0, 0]
+                self.arm.set_joint_positions(joint_positions, moving_time=1.5, accel_time=0.75)
+                self.core.get_node().loginfo('Go Sleep')
             self.update_T_yb()
             self.arm.set_trajectory_time(moving_time=0.2, accel_time=0.1)
 

@@ -63,30 +63,27 @@ static const button_mappings ps3 = {
 
 // PS4 Controller button mappings
 static const button_mappings ps4 = {
-  {"GRIPPER_PWM_DEC", 0},  // buttons start here  // X
-  {"GRIPPER_RELEASE", 1},                         // O
-  {"GRIPPER_PWM_INC", 2},                         // square
-  {"GRIPPER_GRASP", 3},                           // triangle
-  {"EE_Y_INC", 4},                                // L1
-  {"EE_Y_DEC", 5},                                // R1
-  {"WAIST_CCW", 6},                               // L2
-  {"WAIST_CW", 7},                                // R2
-  {"SLEEP_POSE", 8},                              // share
+  {"EE_Y_DEC", 0},       // buttons start here    // X
+  {"EE_ROLL_CCW", 1},                              // O
+  {"EE_Y_INC", 2},                                // triangle
+  {"EE_ROLL_CW", 3},                             // square
+  // {"WAIST_CW", 4},                                // L1
+  {"WAIST_CCW", 5},                               // R1
+  // {"WAIST_CCW", 6},                               // L2
+  // {"WAIST_CW", 7},                                // R2
+  // {"HOME_POSE", 8},                               // share
   {"HOME_POSE", 9},                               // options
-  {"TORQUE_ENABLE", 10},                          // L3
-  {"FLIP_EE_X", 11},                              // R3
-  {"FLIP_EE_ROLL", 12},                           // up
-  // {, 13},                                         // down
-  // {, 14},                                         // left
-  // {, 15},                                         // right
-  // {, 16},                                         // ps
-  // {, 17},                                         // pad
-  {"EE_X", 0},             // axes start here     // left-x
-  {"EE_Z", 1},                                    // left-y
-  {"EE_ROLL", 3},                                 // right-x
-  {"EE_PITCH", 4},                                // right-y
-  {"SPEED_TYPE", 6},                              // L2-axis
-  {"SPEED", 7}                                    // R2-axis
+  {"SLEEP_POSE", 10},                             // PS
+  // {"GRIPPER_CHANGE", 11},                         // L3
+  {"GRIPPER_CHANGE", 12},                         // R3
+  // {"EE_Z", 0},        // axes start here          // left-x left1 right-1
+  // {"EE_X", 1},                                    // left-y up1 down-1
+  // {"WAIST_CCW", 2},                               // L2 axis full-1 none1
+  {"EE_Z", 3},                                    // right-x left1 right-1
+  {"EE_X", 4},                                    // right-y up1 down-1
+  {"WAIST_CW", 5},                                // R2 axis full-1 none1
+  // {"EE_ROLL", 6},                                 // left1 right-1 none0
+  // {"EE_Y", 7}                                     // up1 down-1 none0
 };
 
 // Xbox 360 Controller button mappings
@@ -179,105 +176,57 @@ private:
     static bool flip_torque_cmd_last_state = true;
     static double time_start;
     static bool timer_started = false;
+    static bool gripper_open = true;
+    static int  last_gripper_bnt = 0;
     interbotix_xs_msgs::msg::ArmJoy joy_cmd;
 
-    // Check if the torque_cmd should be flipped
-    if (msg.buttons.at(cntlr["TORQUE_ENABLE"]) == 1 && !flip_torque_cmd_last_state) {
-      flip_torque_cmd = true;
-      joy_cmd.torque_cmd = interbotix_xs_msgs::msg::ArmJoy::TORQUE_ON;
-    } else if (msg.buttons.at(cntlr["TORQUE_ENABLE"]) == 1 && flip_torque_cmd_last_state) {
-      time_start = this->get_clock()->now().seconds();
-      timer_started = true;
-    } else if (msg.buttons.at(cntlr["TORQUE_ENABLE"]) == 0) {
-      if (timer_started && this->get_clock()->now().seconds() - time_start > 3.0) {
-        joy_cmd.torque_cmd = interbotix_xs_msgs::msg::ArmJoy::TORQUE_OFF;
-        flip_torque_cmd = false;
-      }
-      flip_torque_cmd_last_state = flip_torque_cmd;
-      timer_started = false;
-    }
-
-    // Check if the ee_x_cmd should be flipped
-    if (msg.buttons.at(cntlr["FLIP_EE_X"]) == 1 && !flip_ee_x_cmd_last_state) {
-      flip_ee_x_cmd = true;
-    } else if (msg.buttons.at(cntlr["FLIP_EE_X"]) == 1 && flip_ee_x_cmd_last_state) {
-      flip_ee_x_cmd = false;
-    } else if (msg.buttons.at(cntlr["FLIP_EE_X"]) == 0) {
-      flip_ee_x_cmd_last_state = flip_ee_x_cmd;
-    }
-
     // Check the ee_x_cmd
-    if (msg.axes.at(cntlr["EE_X"]) >= threshold && !flip_ee_x_cmd) {
+    if (msg.axes.at(cntlr["EE_X"]) >= threshold) {
       joy_cmd.ee_x_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_X_INC;
-    } else if (msg.axes.at(cntlr["EE_X"]) <= -threshold && !flip_ee_x_cmd) {
+    } else if (msg.axes.at(cntlr["EE_X"]) <= -threshold) {
       joy_cmd.ee_x_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_X_DEC;
-    } else if (msg.axes.at(cntlr["EE_X"]) >= threshold && flip_ee_x_cmd) {
-      joy_cmd.ee_x_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_X_DEC;
-    } else if (msg.axes.at(cntlr["EE_X"]) <= -threshold && flip_ee_x_cmd) {
-      joy_cmd.ee_x_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_X_INC;
     }
 
     // Check the ee_y_cmd
-    if (controller_type == "ps3" || controller_type == "ps4") {
-      if (msg.buttons.at(cntlr["EE_Y_INC"]) == 1) {
-        joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_INC;
-      } else if (msg.buttons.at(cntlr["EE_Y_DEC"]) == 1) {
-        joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_DEC;
-      }
-    } else if (controller_type == "xbox360") {
-      if (msg.axes.at(cntlr["EE_Y_INC"]) <= 1.0 - 2.0 * threshold) {
-        joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_INC;
-      } else if (msg.axes.at(cntlr["EE_Y_DEC"]) <= 1.0 - 2.0 * threshold) {
-        joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_DEC;
-      }
+    if (msg.buttons.at(cntlr["EE_Y_INC"]) == 1) {
+      joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_INC;
+    } else if (msg.buttons.at(cntlr["EE_Y_DEC"]) == 1) {
+      joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_DEC;
     }
 
     // Check the ee_z_cmd
     if (msg.axes.at(cntlr["EE_Z"]) >= threshold) {
-      joy_cmd.ee_z_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Z_INC;
-    } else if (msg.axes.at(cntlr["EE_Z"]) <= -threshold) {
       joy_cmd.ee_z_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Z_DEC;
-    }
-
-    // Check if the ee_roll_cmd should be flipped
-    if (msg.buttons.at(cntlr["FLIP_EE_ROLL"]) == 1 && !flip_ee_roll_cmd_last_state) {
-      flip_ee_roll_cmd = true;
-    } else if (msg.buttons.at(cntlr["FLIP_EE_ROLL"]) == 1 && flip_ee_roll_cmd_last_state) {
-      flip_ee_roll_cmd = false;
-    } else if (msg.buttons.at(cntlr["FLIP_EE_ROLL"]) == 0) {
-      flip_ee_roll_cmd_last_state = flip_ee_roll_cmd;
+    } else if (msg.axes.at(cntlr["EE_Z"]) <= -threshold) {
+      joy_cmd.ee_z_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Z_INC;
     }
 
     // Check the ee_roll_cmd
-    if (msg.axes.at(cntlr["EE_ROLL"]) >= threshold && !flip_ee_roll_cmd) {
+    if (msg.buttons.at(cntlr["EE_ROLL_CW"]) == 1 ) {
       joy_cmd.ee_roll_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_ROLL_CW;
-    } else if (msg.axes.at(cntlr["EE_ROLL"]) <= -threshold && !flip_ee_roll_cmd) {
+    } else if (msg.buttons.at(cntlr["EE_ROLL_CCW"]) == 1) {
       joy_cmd.ee_roll_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_ROLL_CCW;
-    } else if (msg.axes.at(cntlr["EE_ROLL"]) >= threshold && flip_ee_roll_cmd) {
-      joy_cmd.ee_roll_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_ROLL_CCW;
-    } else if (msg.axes.at(cntlr["EE_ROLL"]) <= -threshold && flip_ee_roll_cmd) {
-      joy_cmd.ee_roll_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_ROLL_CW;
-    }
-
-    // Check the ee_pitch_cmd
-    if (msg.axes.at(cntlr["EE_PITCH"]) >= threshold) {
-      joy_cmd.ee_pitch_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_PITCH_UP;
-    } else if (msg.axes.at(cntlr["EE_PITCH"]) <= -threshold) {
-      joy_cmd.ee_pitch_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_PITCH_DOWN;
     }
 
     // Check the waist_cmd
     if (msg.buttons.at(cntlr["WAIST_CCW"]) == 1) {
       joy_cmd.waist_cmd = interbotix_xs_msgs::msg::ArmJoy::WAIST_CCW;
-    } else if (msg.buttons.at(cntlr["WAIST_CW"]) == 1) {
+    } else if (msg.axes.at(cntlr["WAIST_CW"]) <= -threshold) {
       joy_cmd.waist_cmd = interbotix_xs_msgs::msg::ArmJoy::WAIST_CW;
     }
 
     // Check the gripper_cmd
-    if (msg.buttons.at(cntlr["GRIPPER_GRASP"]) == 1) {
+    if (msg.buttons.at(cntlr["GRIPPER_CHANGE"]) == 1 && !last_gripper_bnt && gripper_open) {
       joy_cmd.gripper_cmd = interbotix_xs_msgs::msg::ArmJoy::GRIPPER_GRASP;
-    } else if (msg.buttons.at(cntlr["GRIPPER_RELEASE"]) == 1) {
+      gripper_open = false;
+      last_gripper_bnt = 1;
+    } else if (msg.buttons.at(cntlr["GRIPPER_CHANGE"]) == 1 && !last_gripper_bnt && !gripper_open) {
       joy_cmd.gripper_cmd = interbotix_xs_msgs::msg::ArmJoy::GRIPPER_RELEASE;
+      gripper_open = true;
+      last_gripper_bnt = 1;
+    } else if (msg.buttons.at(cntlr["GRIPPER_CHANGE"]) == 0 && last_gripper_bnt)
+    {
+      last_gripper_bnt = 0;
     }
 
     // Check the pose_cmd
@@ -285,43 +234,6 @@ private:
       joy_cmd.pose_cmd = interbotix_xs_msgs::msg::ArmJoy::HOME_POSE;
     } else if (msg.buttons.at(cntlr["SLEEP_POSE"]) == 1) {
       joy_cmd.pose_cmd = interbotix_xs_msgs::msg::ArmJoy::SLEEP_POSE;
-    }
-
-    if (controller_type == "ps3") {
-      // Check the speed_cmd
-      if (msg.buttons.at(cntlr["SPEED_INC"]) == 1) {
-        joy_cmd.speed_cmd = interbotix_xs_msgs::msg::ArmJoy::SPEED_INC;
-      } else if (msg.buttons.at(cntlr["SPEED_DEC"]) == 1) {
-        joy_cmd.speed_cmd = interbotix_xs_msgs::msg::ArmJoy::SPEED_DEC;
-      }
-
-      // Check the speed_toggle_cmd
-      if (msg.buttons.at(cntlr["SPEED_COARSE"]) == 1) {
-        joy_cmd.speed_toggle_cmd = interbotix_xs_msgs::msg::ArmJoy::SPEED_COARSE;
-      } else if (msg.buttons.at(cntlr["SPEED_FINE"]) == 1) {
-        joy_cmd.speed_toggle_cmd = interbotix_xs_msgs::msg::ArmJoy::SPEED_FINE;
-      }
-    } else if (controller_type == "ps4" || controller_type == "xbox360") {
-      // Check the speed_cmd
-      if (msg.axes.at(cntlr["SPEED"]) == 1) {
-        joy_cmd.speed_cmd = interbotix_xs_msgs::msg::ArmJoy::SPEED_INC;
-      } else if (msg.axes.at(cntlr["SPEED"]) == -1) {
-        joy_cmd.speed_cmd = interbotix_xs_msgs::msg::ArmJoy::SPEED_DEC;
-      }
-
-      // Check the speed_toggle_cmd
-      if (msg.axes.at(cntlr["SPEED_TYPE"]) == 1) {
-        joy_cmd.speed_toggle_cmd = interbotix_xs_msgs::msg::ArmJoy::SPEED_COARSE;
-      } else if (msg.axes.at(cntlr["SPEED_TYPE"]) == -1) {
-        joy_cmd.speed_toggle_cmd = interbotix_xs_msgs::msg::ArmJoy::SPEED_FINE;
-      }
-    }
-
-    // Check the gripper_pwm_cmd
-    if (msg.buttons.at(cntlr["GRIPPER_PWM_INC"]) == 1) {
-      joy_cmd.gripper_pwm_cmd = interbotix_xs_msgs::msg::ArmJoy::GRIPPER_PWM_INC;
-    } else if (msg.buttons.at(cntlr["GRIPPER_PWM_DEC"]) == 1) {
-      joy_cmd.gripper_pwm_cmd = interbotix_xs_msgs::msg::ArmJoy::GRIPPER_PWM_DEC;
     }
 
     // Only publish a ArmJoy message if any of the following fields have changed.

@@ -71,18 +71,18 @@ static const button_mappings ps4 = {
   // {"EE_Y_DEC", 5},                                // R1
   // {"WAIST_CCW", 6},                               // L2
   // {"WAIST_CW", 7},                                // R2
-  {"GRIPPER_RELEASE", 8},                         // share
-  {"SLEEP_POSE", 9},                              // options
-  {"HOME_POSE", 10},                              // PS
-  {"GRIPPER_GRASP", 11},                          // L3
+  {"HOME_POSE", 8},                               // share
+  // {"SLEEP_POSE", 9},                              // options
+  {"SLEEP_POSE", 10},                             // PS
+  {"GRIPPER_CHANGE", 11},                          // L3
   // {"EE_Z_INC", 12},                               // R3
-  {"EE_PITCH", 0},             // axes start here // left-x left1 right-1
+  {"EE_Z", 0},             // axes start here     // left-x left1 right-1
   {"EE_X", 1},                                    // left-y up1 down-1
   {"WAIST_CCW", 2},                               // L2 axis full-1 none1
   // {"EE_ROLL", 3},                                 // right-x left1 right-1
   // {"EE_PITCH", 4},                                // right-y up1 down-1
   // {, 5},                                          // R2 axis full-1 none1
-  {"EE_Z", 6},                                    // left1 right-1 none0
+  {"EE_ROLL", 6},                                 // left1 right-1 none0
   {"EE_Y", 7}                                     // up1 down-1 none0
 };
 
@@ -176,6 +176,8 @@ private:
     static bool flip_torque_cmd_last_state = true;
     static double time_start;
     static bool timer_started = false;
+    static bool gripper_open = true;
+    static int  last_gripper_bnt = 0;
     interbotix_xs_msgs::msg::ArmJoy joy_cmd;
 
     // Check the ee_x_cmd
@@ -187,23 +189,30 @@ private:
 
     // Check the ee_y_cmd
     if (msg.axes.at(cntlr["EE_Y"]) == 1) {
-      joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_INC;
-    } else if (msg.axes.at(cntlr["EE_Y"]) == -1) {
       joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_DEC;
+    } else if (msg.axes.at(cntlr["EE_Y"]) == -1) {
+      joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_INC;
     }
 
     // Check the ee_z_cmd
-    if (msg.axes.at(cntlr["EE_Z"]) == 1) {
-      joy_cmd.ee_z_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Z_INC;
-    } else if (msg.axes.at(cntlr["EE_Z"]) == -1) {
+    if (msg.axes.at(cntlr["EE_Z"]) <= -threshold) {
       joy_cmd.ee_z_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Z_DEC;
+    } else if (msg.axes.at(cntlr["EE_Z"]) >= threshold) {
+      joy_cmd.ee_z_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Z_INC;
     }
 
-    // Check the ee_pitch_cmd
-    if (msg.axes.at(cntlr["EE_PITCH"]) >= threshold) {
-      joy_cmd.ee_pitch_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_PITCH_UP;
-    } else if (msg.axes.at(cntlr["EE_PITCH"]) <= -threshold) {
-      joy_cmd.ee_pitch_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_PITCH_DOWN;
+    // // Check the ee_pitch_cmd
+    // if (msg.axes.at(cntlr["EE_PITCH"]) >= threshold) {
+    //   joy_cmd.ee_pitch_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_PITCH_UP;
+    // } else if (msg.axes.at(cntlr["EE_PITCH"]) <= -threshold) {
+    //   joy_cmd.ee_pitch_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_PITCH_DOWN;
+    // }
+    
+    // Check the ee_roll_cmd
+    if (msg.axes.at(cntlr["EE_ROLL"]) == 1) {
+      joy_cmd.ee_roll_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_ROLL_CW;
+    } else if (msg.axes.at(cntlr["EE_ROLL"]) == -1) {
+      joy_cmd.ee_roll_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_ROLL_CCW;
     }
 
     // Check the waist_cmd
@@ -214,16 +223,24 @@ private:
     }
 
     // Check the gripper_cmd
-    if (msg.buttons.at(cntlr["GRIPPER_GRASP"]) == 1) {
+    if (msg.buttons.at(cntlr["GRIPPER_CHANGE"]) == 1 && !last_gripper_bnt && gripper_open) {
       joy_cmd.gripper_cmd = interbotix_xs_msgs::msg::ArmJoy::GRIPPER_GRASP;
-    } else if (msg.buttons.at(cntlr["GRIPPER_RELEASE"]) == 1) {
+      gripper_open = false;
+      last_gripper_bnt = 1;
+    } else if (msg.buttons.at(cntlr["GRIPPER_CHANGE"]) == 1 && !last_gripper_bnt && !gripper_open) {
       joy_cmd.gripper_cmd = interbotix_xs_msgs::msg::ArmJoy::GRIPPER_RELEASE;
+      gripper_open = true;
+      last_gripper_bnt = 1;
+    } else if (msg.buttons.at(cntlr["GRIPPER_CHANGE"]) == 0 && last_gripper_bnt)
+    {
+      last_gripper_bnt = 0;
     }
+    
 
     // Check the pose_cmd
     if (msg.buttons.at(cntlr["HOME_POSE"]) == 1) {
       joy_cmd.pose_cmd = interbotix_xs_msgs::msg::ArmJoy::HOME_POSE;
-    } else if (msg.buttons.at(cntlr["SLEEP_POSE"]) == 1 && msg.buttons.at(cntlr["GRIPPER_RELEASE"]) == 1) {
+    } else if (msg.buttons.at(cntlr["SLEEP_POSE"]) == 1) {
       joy_cmd.pose_cmd = interbotix_xs_msgs::msg::ArmJoy::SLEEP_POSE;
     }
 
