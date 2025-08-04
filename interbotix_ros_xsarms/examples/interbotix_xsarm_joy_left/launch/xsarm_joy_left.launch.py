@@ -151,7 +151,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'use_rviz',
-            default_value='true',
+            default_value='false',
             choices=('true', 'false'),
             description='launches RViz if set to `true`.',
         )

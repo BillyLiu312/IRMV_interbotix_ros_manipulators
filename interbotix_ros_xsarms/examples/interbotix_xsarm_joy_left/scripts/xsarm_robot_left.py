@@ -155,9 +155,9 @@ class XSArmRobot(InterbotixManipulatorXS):
 
         # Check the gripper_cmd
         if (msg.gripper_cmd == ArmJoy.GRIPPER_RELEASE):
-            self.gripper.release(delay=0)
+            self.gripper.release(delay=1.0)
         elif (msg.gripper_cmd == ArmJoy.GRIPPER_GRASP):
-            self.gripper.grasp(delay=0)
+            self.gripper.grasp(delay=1.0)
 
         # Check the gripper_pwm_cmd
         if (

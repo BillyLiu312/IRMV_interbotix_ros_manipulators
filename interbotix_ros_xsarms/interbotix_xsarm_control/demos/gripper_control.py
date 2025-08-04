@@ -59,6 +59,7 @@ def main():
     bot.gripper.grasp(2.0)
     bot.gripper.release(2.0)
 
+
     robot_shutdown()
 
 
